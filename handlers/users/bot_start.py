@@ -26,7 +26,7 @@ async def command_start(message: types.Message):
                                 username=message.from_user.username,
                                 referral_id=int(new_args),
                                 status='active',
-                                subscription=0,
+                                time_report='',
                                 course_history='')
 
         # отправляем админам нового пользователя

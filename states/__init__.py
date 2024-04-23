@@ -1,2 +1,1 @@
-
-from .analysis import Analysis
+from .time_receipt import Receipt

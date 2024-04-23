@@ -2,8 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 
 
-# Функция для получения курса валюты
-def get_currency_rate():
+def get_currency_rate() -> str:
     """
     Функция для получения курса валюты
     :return: string
