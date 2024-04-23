@@ -1,8 +1,11 @@
 import requests
 from bs4 import BeautifulSoup
+from datetime import datetime
+
+from utils.db_api.user_commands import add_course_history
 
 
-def get_currency_rate() -> str:
+async def get_currency_rate(user_id: int) -> str:
     """
     Функция для получения курса валюты
     :return: string
@@ -26,5 +29,8 @@ def get_currency_rate() -> str:
     # делаем в каком значении нужно
     result = f' 1 USD = {amount} ₽'
 
-    return result
+    # записываем запрос в БД
+    value = str(datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + f'{amount} ₽'
+    await add_course_history(user_id, value)
 
+    return result
