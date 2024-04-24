@@ -1,6 +1,7 @@
 from aiogram import types
 
 
+#  Установка стандартных команд для бота
 async def set_default_commands(dp):
     await dp.bot.set_my_commands([
         types.BotCommand('start', 'Старт'),

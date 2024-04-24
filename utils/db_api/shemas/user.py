@@ -11,6 +11,6 @@ class User(TimedBaseModel):
     username = Column(String(50))
     referral_id = Column(BigInteger)
     status = Column(String(30))
-    time_report = Column(String(1000))
+    time_report = Column(String(15000))
     course_history = Column(String(10000))
     query: sql.select

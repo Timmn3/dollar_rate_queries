@@ -1,5 +1,5 @@
 from loader import scheduler
-from scheduler.by_time import schedule_jobs, schedule_balance
+from scheduler.by_time import schedule_jobs
 
 
 async def on_startup(dpr):
@@ -19,29 +19,15 @@ async def on_startup(dpr):
     logger.info('Бот запущен')
 
     # импортирует функцию, которая отправляет сообщение о запуске бота всем администраторам
-    from bot_send.notify_admins import on_startup_notufy
-    await on_startup_notufy(dpr)
+    from bot_send.notify_admins import on_startup_notify
+    await on_startup_notify(dpr)
 
     # импортирует функцию, которая устанавливает команды бота
     from bot_send.set_bot_commands import set_default_commands
     await set_default_commands(dpr)
 
-    # парсим
-    # from request.parse_last import parse_last  # последнийй тираж
-    # await parse_last()
-
-    # from request.parse_all import add_in_bd_all  # все тиражи
-    # from request.parse_all import parse_all
-    # await add_in_bd_all(parse_all())
-
-    # print('\n Парсим 50 последних тиражей...')
-    # print('')
-    # print('Закончили парсить: Ok - добавлено, N - не добавлено\n')
-
     # запускаем парсинг по времени
     await schedule_jobs()
-    # отправка сообщения о балансе ниже 100 р
-    schedule_balance()
 
 
 if __name__ == '__main__':

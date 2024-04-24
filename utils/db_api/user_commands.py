@@ -6,6 +6,22 @@ from utils.db_api.shemas.user import User
 
 async def add_user(user_id: int, first_name: str, last_name: str, username: str, referral_id: int, status: str,
                    time_report: str, course_history: str):
+    """
+    Добавление нового пользователя в базу данных.
+
+    Args:
+        user_id (int): ID пользователя.
+        first_name (str): Имя пользователя.
+        last_name (str): Фамилия пользователя.
+        username (str): Имя пользователя в Telegram.
+        referral_id (int): ID пользователя, который пригласил данного пользователя.
+        status (str): Статус пользователя.
+        time_report (str): Отчеты по времени пользователя.
+        course_history (str): История запросов курсов пользователя.
+
+    Raises:
+        UniqueViolationError: Если пользователь с таким ID уже существует в базе данных.
+    """
     try:
         user = User(user_id=user_id, first_name=first_name, last_name=last_name, username=username,
                     referral_id=referral_id, status=status, time_report=time_report, course_history=course_history)
@@ -15,7 +31,7 @@ async def add_user(user_id: int, first_name: str, last_name: str, username: str,
 
 
 async def select_all_users():
-    """ Выбрать всех пользователей """
+    """Выбрать всех пользователей."""
     try:
         users = await User.query.gino.all()
         return users
@@ -24,7 +40,7 @@ async def select_all_users():
 
 
 async def count_users():
-    """ Подсчет количества пользователей """
+    """Подсчет количества пользователей."""
     try:
         count = await db.func.count(User.user_id).gino.scalar()
         return count
@@ -33,7 +49,7 @@ async def count_users():
 
 
 async def select_user(user_id):
-    """ Выбрать пользователя """
+    """Выбрать пользователя по его ID."""
     try:
         user = await User.query.where(User.user_id == user_id).gino.first()
         return user
@@ -42,26 +58,37 @@ async def select_user(user_id):
 
 
 async def check_args(args, user_id: int):
-    """ Проверка аргументов переданных при регистрации """
+    """
+    Проверка аргументов, переданных при регистрации.
+
+    Args:
+        args (str): Аргументы, переданные при регистрации.
+        user_id (int): ID пользователя.
+
+    Returns:
+        str: Проверенные аргументы.
+
+    Notes:
+        Если аргументы не прошли проверку, возвращается '0'.
+    """
     try:
-        if args == '':  # если в аргумент передана пустая строка
+        if args == '':
             args = '0'
             return args
-        elif not args.isnumeric():  # если не только цифры, а и буквы
+        elif not args.isnumeric():
             args = '0'
             return args
-        elif args.isnumeric():  # если только цифры
-            if int(args) == user_id:  # если аргумент является id пользователя
+        elif args.isnumeric():
+            if int(args) == user_id:
                 args = '0'
                 return args
-            # получаем из БД пользователя у которого user_id такой же, как и переданный аргумент
-            elif await select_user(user_id=int(args)) is None:  # если его нет
+            elif await select_user(user_id=int(args)) is None:
                 args = '0'
                 return args
-            else:  # если аргумент прошел все проверки
+            else:
                 args = str(args)
                 return args
-        else:  # если что-то пошло не так
+        else:
             args = '0'
             return args
     except Exception as e:
@@ -69,16 +96,30 @@ async def check_args(args, user_id: int):
 
 
 async def get_time_report(user_id: int) -> str:
-    """ Получение времени отчета для пользователя """
+    """
+    Получение временного отчета для пользователя.
+
+    Args:
+        user_id (int): ID пользователя.
+
+    Returns:
+        str: Временной отчет пользователя.
+    """
     try:
-        user = await select_user(user_id)  # получаем юзера
+        user = await select_user(user_id)
         return user.time_report
     except Exception as e:
-        logger.exception(f'Ошибка при получении времени отчета: {e}')
+        logger.exception(f'Ошибка при получении временного отчета: {e}')
 
 
 async def change_time_report(user_id: int, value: str):
-    """ Изменяем значение отчета пользователю """
+    """
+    Изменение значения временного отчета пользователя.
+
+    Args:
+        user_id (int): ID пользователя.
+        value (str): Новое значение временного отчета.
+    """
     try:
         user = await select_user(user_id)
         new_time_report = value
@@ -88,7 +129,12 @@ async def change_time_report(user_id: int, value: str):
 
 
 async def clear_time_report(user_id: int):
-    """ Очищаем поле отчета по времени"""
+    """
+    Очистка поля временного отчета пользователя.
+
+    Args:
+        user_id (int): ID пользователя.
+    """
     try:
         user = await select_user(user_id)
         await user.update(time_report='').apply()
@@ -96,19 +142,56 @@ async def clear_time_report(user_id: int):
         logger.exception(f'Ошибка при очистке отчета: {e}')
 
 
+async def get_non_empty_time_reports() -> dict:
+    """
+    Получение непустых отчетов времени для пользователей.
+
+    Returns:
+        dict: Словарь с ID пользователя в качестве ключа и непустым временным отчетом в качестве значения.
+    """
+    try:
+        users = await select_all_users()
+        non_empty_time_reports = {}
+        for user in users:
+            if user.time_report and user.time_report.strip():
+                non_empty_time_reports[user.user_id] = user.time_report
+        return non_empty_time_reports
+    except Exception as e:
+        logger.exception(f'Ошибка при получении непустых отчетов времени: {e}')
+
+
 async def add_course_history(user_id: int, value: str):
-    """ Добавляем новую строку к истории курсов для пользователя """
+    """
+    Добавление нового запроса в историю курсов пользователя.
+
+    Args:
+        user_id (int): ID пользователя.
+        value (str): Новый запрос курса.
+
+    Raises:
+        Exception: Если произошла ошибка при добавлении курса в историю.
+    """
     try:
         user = await select_user(user_id)
         current_course_history = user.course_history if user.course_history else ''
-        new_course_history = '\n'.join([current_course_history, value])
-        await user.update(course_history=new_course_history).apply()
+        history_lines = current_course_history.split('\n')
+        history_lines.append(value)
+        updated_history = '\n'.join(history_lines[-100:])
+        await user.update(course_history=updated_history).apply()
     except Exception as e:
         logger.exception(f'Ошибка при добавлении курса в историю: {e}')
 
 
 async def get_course_history(user_id: int) -> str:
-    """ Получение истории курсов для пользователя """
+    """
+    Получение истории курсов для пользователя.
+
+    Args:
+        user_id (int): ID пользователя.
+
+    Returns:
+        str: История курсов пользователя.
+    """
     try:
         user = await select_user(user_id)
         return user.course_history

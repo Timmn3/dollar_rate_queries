@@ -1,46 +1,31 @@
-from aiogram import Dispatcher
-from data import config
-from loader import scheduler
-import request
+from datetime import datetime
+from loguru import logger
+from loader import scheduler, dp
+from request.get_course import get_currency_rate
+from utils.db_api.user_commands import get_non_empty_time_reports
 
 
-async def send_message_to(dpr: Dispatcher):
-    await dpr.bot.send_message(config.admins[0], 'Сообщение по таймеру')
-
-
-# запрос на страницу
-def request_page():
-    url = 'https://www.google.com/'
-    request.get(url)
-
-
-# https://telegra.ph/Zapusk-funkcij-v-bote-po-tajmeru-11-28
-
-def schedule_send():
-    scheduler.add_job(request_page, 'interval', minutes=1)
-
-
-# парсинг по времени
 async def schedule_jobs():
-    # scheduler.add_job(send_message_to, 'interval', seconds=2, args=(dp,))  # отправка каждые 5 сек
-    # scheduler.add_job(send_message_to, "date", run_date=datetime(2022, 10, 19, 19, 57), args=(dp,)) #отправка по дате
-    # scheduler.add_job(add_in_bd_page, 'cron', hour=20, minute=25, end_date='2025-05-30',
-    #                   args=(parse_page()))  # отправка по врем
-
+    """
+    Запускает задачу по расписанию для отправки сообщений пользователям.
+    """
     try:
-        scheduler.add_job(add_in_bd_page, 'cron', hour=10, minute=10, end_date='2025-05-30')
-        scheduler.add_job(add_in_bd_page, 'cron', hour=13, minute=10, end_date='2025-05-30')
-        scheduler.add_job(add_in_bd_page, 'cron', hour=16, minute=10, end_date='2025-05-30')
-        scheduler.add_job(add_in_bd_page, 'cron', hour=18, minute=10, end_date='2025-05-30')
-        scheduler.add_job(add_in_bd_page, 'cron', hour=22, minute=10, end_date='2025-05-30')
-    except Exception:
-        print('Ошибка парсинга по времени')
+        scheduler.add_job(send_message_task, 'interval', minutes=1)  # Запускаем задачу каждую минуту
+    except Exception as e:
+        logger.exception(f'Ошибка при добавлении задачи в расписание: {e}')
 
 
-# отправка сообщения о балансе ниже 100 р
-def schedule_balance():
+async def send_message_task():
+    """
+    Отправляет сообщения пользователям с курсом валюты в указанный ими момент времени.
+    """
     try:
-        scheduler.add_job(send_message_users_balance_lower_100, 'cron', hour=12, minute=0, end_date='2025-05-30')
-        scheduler.add_job(send_message_users_balance_lower_100, 'cron', hour=19, minute=0, end_date='2025-05-30')
-    except Exception:
-        print('Ошибка отправки сообщения о балансе')
+        current_time = datetime.now().strftime("%H:%M")  # Получаем текущее время в формате 'hour:minute'
+        empty_time_reports = await get_non_empty_time_reports()  # Получаем словарь с непустым временем пользователей
+        for user_id, course_history in empty_time_reports.items():
+            # Проверяем, наступило ли заданное время для отправки сообщения пользователю
+            if current_time in course_history:
+                text = await get_currency_rate(user_id)  # Получаем курс валют для данного пользователя
+                await dp.bot.send_message(chat_id=user_id, text=text)  # Отправляем сообщение
+    except Exception as e:
+        logger.exception(f'Ошибка при отправке сообщения: {e}')
